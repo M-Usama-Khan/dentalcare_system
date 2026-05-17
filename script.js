@@ -1,10 +1,147 @@
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   LANDING PAGE HELPERS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+function goToAuth(tab) {
+    if (tab !== 'login' || !isAdminLoginMode) clearAdminLoginMode();
+    document.getElementById('view-landing').classList.add('hidden');
+    const authWrap = document.getElementById('view-auth');
+    authWrap.classList.remove('hidden');
+    // Reset animation
+    authWrap.classList.remove('page-fade');
+    void authWrap.offsetWidth;
+    authWrap.classList.add('page-fade');
+    switchAuthTab(tab || 'login');
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function goToLanding() {
+    clearAdminLoginMode();
+    document.getElementById('view-auth').classList.add('hidden');
+    document.getElementById('view-main').classList.add('hidden');
+    const landing = document.getElementById('view-landing');
+    landing.classList.remove('hidden');
+    landing.classList.remove('page-fade');
+    void landing.offsetWidth;
+    landing.classList.add('page-fade');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (typeof history.replaceState === 'function') {
+        history.replaceState(null, '', location.pathname + location.search);
+    }
+}
+
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // If auth or main is showing, go back to landing first
+    if (!document.getElementById('view-landing').classList.contains('hidden')) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        goToLanding();
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    }
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   APP STATE
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
 const USER_STORE_KEY = 'deepsense_users';
+const DEFAULT_ADMIN_EMAIL = 'admin@deepsense.health';
+const DEFAULT_ADMIN_PASSWORD = 'Admin@2025';
 
 let currentRole = 'Patient';
 let currentPage = 'dashboard';
 let currentUserName = '';
+let isAdminLoginMode = false;
 let micOn = true,
     camOn = true;
+
+function seedDefaultAdmin() {
+    const users = loadUserRecords();
+    if (users.some(u => u.email === DEFAULT_ADMIN_EMAIL)) return;
+    users.push({
+        email: DEFAULT_ADMIN_EMAIL,
+        password: DEFAULT_ADMIN_PASSWORD,
+        fullName: 'Platform Administrator',
+        role: 'Admin',
+        medicalLicense: null,
+    });
+    saveUserRecords(users);
+}
+
+seedDefaultAdmin();
+
+function goToAdminLogin() {
+    isAdminLoginMode = true;
+    goToAuth('login');
+    const banner = document.getElementById('admin-login-banner');
+    const loginName = document.getElementById('login-name');
+    const submitBtn = document.getElementById('login-submit-btn');
+    const emailEl = document.getElementById('login-email');
+    if (banner) banner.classList.remove('hidden');
+    if (loginName) loginName.closest('.field')?.classList.add('hidden');
+    if (submitBtn) submitBtn.textContent = 'Sign in to admin';
+    if (emailEl) {
+        emailEl.value = DEFAULT_ADMIN_EMAIL;
+        emailEl.focus();
+    }
+    const passEl = document.getElementById('login-pass');
+    if (passEl) passEl.value = '';
+}
+
+function clearAdminLoginMode() {
+    isAdminLoginMode = false;
+    const banner = document.getElementById('admin-login-banner');
+    const loginName = document.getElementById('login-name');
+    const submitBtn = document.getElementById('login-submit-btn');
+    if (banner) banner.classList.add('hidden');
+    if (loginName) loginName.closest('.field')?.classList.remove('hidden');
+    if (submitBtn) submitBtn.textContent = 'Sign in';
+}
+
+const navIcons = {
+    dashboard: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>',
+    analysis: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 11h6M11 8v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    patients: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    appointments: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    teleconsult: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="3" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>',
+    reports: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    myreports: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>',
+    users: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.5"/></svg>',
+    clinics: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9v.01M9 12v.01M9 15v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    analytics: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    system: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    audit: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+};
+
+function renderTopbar(title, subtitle, actionsHtml = '') {
+    const sub = subtitle ? `<p class="topbar-sub">${subtitle}</p>` : '';
+    return `<div class="topbar">
+      <div class="topbar-left">
+        <h1>${title}</h1>${sub}
+      </div>
+      <div class="topbar-actions">${actionsHtml}</div>
+    </div>`;
+}
+
+function getPlatformStats() {
+    const users = loadUserRecords();
+    const dentists = users.filter(u => u.role === 'Dentist').length;
+    const patients = users.filter(u => u.role === 'Patient').length;
+    const admins = users.filter(u => u.role === 'Admin').length;
+    return {
+        totalUsers: users.length,
+        dentists,
+        patients,
+        admins,
+        analyses: 12480,
+        clinics: Math.max(dentists, 1) * 3,
+        appointmentsToday: 142,
+        uptime: '99.97%',
+    };
+}
 
 function loadUserRecords() {
     try {
@@ -36,6 +173,8 @@ function switchAuthTab(tab) {
 }
 
 function syncAuthTabFromHash() {
+    // Only act if auth view is visible (not on initial landing load)
+    if (document.getElementById('view-auth').classList.contains('hidden')) return;
     const h = (location.hash || '').replace(/^#\/?/, '').toLowerCase().split(/[&?]/)[0];
     if (h === 'signup') switchAuthTab('signup');
     else switchAuthTab('login');
@@ -62,11 +201,11 @@ function doLogin() {
     const nameInput = document.getElementById(isSignup ? 'signup-name' : 'login-name');
     const emailInput = document.getElementById(isSignup ? 'signup-email' : 'login-email');
     const passInput = document.getElementById(isSignup ? 'signup-pass' : 'login-pass');
-    const fullName = nameInput ? nameInput.value.trim() : '';
+    let fullName = nameInput ? nameInput.value.trim() : '';
     const email = emailInput ? emailInput.value.trim() : '';
     const password = passInput ? passInput.value : '';
 
-    if (!fullName) {
+    if (isSignup && !fullName) {
         showNotif('Please enter your full name.');
         if (nameInput) nameInput.focus();
         return;
@@ -138,10 +277,20 @@ function doLogin() {
         showNotif('Invalid email or password.');
         return;
     }
-    users[idx].fullName = fullName;
-    saveUserRecords(users);
-    const sessionRole = users[idx].role === 'Dentist' ? 'Dentist' : 'Patient';
-    showNotif(`Signed in as ${sessionRole}. Loading dashboard...`);
+    if (isAdminLoginMode && users[idx].role !== 'Admin') {
+        showNotif('This account does not have administrator access.');
+        return;
+    }
+    if (fullName) {
+        users[idx].fullName = fullName;
+        saveUserRecords(users);
+    }
+    fullName = users[idx].fullName || email;
+    let sessionRole = users[idx].role;
+    if (sessionRole !== 'Dentist' && sessionRole !== 'Admin') sessionRole = 'Patient';
+    const roleLabel = sessionRole === 'Admin' ? 'Administrator' : sessionRole;
+    showNotif(`Signed in as ${roleLabel}. Loading dashboard...`);
+    clearAdminLoginMode();
 
     currentRole = sessionRole;
     currentUserName = fullName;
@@ -205,8 +354,7 @@ function sendPasswordResetLink() {
 
 function logout() {
     document.getElementById('view-main').classList.add('hidden');
-    document.getElementById('view-auth').classList.remove('hidden');
-    switchAuthTab('login');
+    goToLanding();
 }
 
 function showNotif(msg, dur = 2500) {
@@ -238,33 +386,63 @@ if (document.readyState === 'loading') {
 
 const navConfigs = {
     Dentist: [
-        { id: 'dashboard', icon: '⬛', label: 'Dashboard' },
-        { id: 'analysis', icon: '🔬', label: 'AI Analysis' },
-        { id: 'patients', icon: '👥', label: 'Patients' },
-        { id: 'appointments', icon: '📅', label: 'Appointments' },
-        { id: 'teleconsult', icon: '🎥', label: 'Telehealth' },
-        { id: 'reports', icon: '📋', label: 'Reports' },
+        { id: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
+        { id: 'analysis', icon: 'analysis', label: 'AI Analysis' },
+        { id: 'patients', icon: 'patients', label: 'Patients' },
+        { id: 'appointments', icon: 'appointments', label: 'Appointments' },
+        { id: 'teleconsult', icon: 'teleconsult', label: 'Telehealth' },
+        { id: 'reports', icon: 'reports', label: 'Reports' },
     ],
     Patient: [
-        { id: 'dashboard', icon: '⬛', label: 'Home' },
-        { id: 'myreports', icon: '📋', label: 'My Reports' },
-        { id: 'appointments', icon: '📅', label: 'Appointments' },
-        { id: 'teleconsult', icon: '🎥', label: 'Video Call' },
-    ]
+        { id: 'dashboard', icon: 'dashboard', label: 'Home' },
+        { id: 'myreports', icon: 'myreports', label: 'My Reports' },
+        { id: 'appointments', icon: 'appointments', label: 'Appointments' },
+        { id: 'teleconsult', icon: 'teleconsult', label: 'Video Call' },
+    ],
+    Admin: [
+        { id: 'dashboard', icon: 'dashboard', label: 'Overview' },
+        { id: 'admin-users', icon: 'users', label: 'Users' },
+        { id: 'admin-clinics', icon: 'clinics', label: 'Clinics' },
+        { id: 'admin-analytics', icon: 'analytics', label: 'Analytics' },
+        { id: 'admin-audit', icon: 'audit', label: 'Audit log' },
+        { id: 'admin-system', icon: 'system', label: 'System' },
+    ],
 };
 
 function setupDashboard() {
     const nav = document.getElementById('sidebar-nav');
+    const sidebar = document.getElementById('app-sidebar');
+    const mainLayout = document.getElementById('view-main');
     const items = navConfigs[currentRole] || navConfigs.Dentist;
-    nav.innerHTML = items.map(i => `
+    const isAdmin = currentRole === 'Admin';
+
+    if (sidebar) sidebar.classList.toggle('sidebar-admin', isAdmin);
+    if (mainLayout) mainLayout.classList.toggle('layout-admin', isAdmin);
+
+    const brand = document.getElementById('sidebar-brand');
+    if (brand) brand.textContent = isAdmin ? 'DeepSense Admin' : 'DeepSense';
+
+    const sectionLabel = document.getElementById('sidebar-section-label');
+    if (sectionLabel) sectionLabel.textContent = isAdmin ? 'Administration' : 'Menu';
+
+    nav.innerHTML = items
+        .map(
+            i => `
     <div class="nav-item ${i.id === 'dashboard' ? 'active' : ''}" onclick="navigate('${i.id}')" id="nav-${i.id}">
-      <span style="font-size:14px">${i.icon}</span>
+      ${navIcons[i.icon] || navIcons.dashboard}
       <span>${i.label}</span>
-    </div>`).join('');
+    </div>`
+        )
+        .join('');
+
     const initials = getInitialsFromName(currentUserName);
-    document.getElementById('sidebar-avatar').textContent = initials;
+    const avatar = document.getElementById('sidebar-avatar');
+    if (avatar) {
+        avatar.textContent = initials;
+        avatar.classList.toggle('avatar-admin', isAdmin);
+    }
     document.getElementById('sidebar-name').textContent = currentUserName;
-    document.getElementById('sidebar-role').textContent = currentRole;
+    document.getElementById('sidebar-role').textContent = isAdmin ? 'Administrator' : currentRole;
 }
 
 function navigate(page) {
@@ -285,73 +463,224 @@ function navigate(page) {
         teleconsult: renderTeleconsult,
         reports: renderReports,
         myreports: renderMyReports,
+        'admin-users': renderAdminUsers,
+        'admin-clinics': renderAdminClinics,
+        'admin-analytics': renderAdminAnalytics,
+        'admin-audit': renderAdminAudit,
+        'admin-system': renderAdminSystem,
     };
     (renders[page] || renderDashboard)();
 }
 
+function statCardPro(label, value, sub, trend, accent, iconSvg) {
+    const trendHtml = trend
+        ? `<span class="stat-trend ${trend.startsWith('+') ? 'up' : trend.startsWith('-') ? 'down' : ''}">${trend}</span>`
+        : '';
+    return `<div class="stat-card stat-card-${accent || 'blue'}">
+      <div class="stat-card-header">
+        <div class="stat-card-icon-wrap">${iconSvg}</div>
+        <div class="stat-card-label">${label}</div>
+      </div>
+      <div class="stat-card-value">${value}</div>
+      <div class="stat-card-footer">${sub || ''}${trendHtml}</div>
+    </div>`;
+}
+
+const dashStatIcons = {
+    patients: '<svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>',
+    scan: '<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    accuracy: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.5"/></svg>',
+    report: '<svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/></svg>',
+    visit: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    video: '<svg viewBox="0 0 24 24" fill="none"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/></svg>',
+};
+
+function renderDashFinding(severity, title, meta, confidence) {
+    const map = {
+        high: { color: '#e24b4a', badge: 'badge-red' },
+        medium: { color: '#ef9f27', badge: 'badge-amber' },
+        low: { color: '#639922', badge: 'badge-green' },
+    };
+    const s = map[severity] || map.medium;
+    return `<div class="dash-finding">
+      <div class="dash-finding-indicator" style="background:${s.color}"></div>
+      <div class="dash-finding-body">
+        <div class="dash-finding-title">${title}</div>
+        <div class="dash-finding-meta">${meta}</div>
+      </div>
+      <span class="badge ${s.badge}">${confidence}</span>
+    </div>`;
+}
+
+function renderQuickActions(actions) {
+    return `<div class="quick-actions">${actions
+        .map(
+            ([icon, label, desc, page]) => `
+      <button type="button" class="quick-action-btn" onclick="navigate('${page}')">
+        <span class="quick-action-icon">${icon}</span>
+        <span class="quick-action-text">
+          <span class="quick-action-label">${label}</span>
+          <span class="quick-action-desc">${desc}</span>
+        </span>
+        <svg class="quick-action-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>`
+        )
+        .join('')}</div>`;
+}
+
+function getGreetingName() {
+    return (currentUserName || '').trim().split(/\s+/)[0] || 'there';
+}
+
+function renderDentistDashboard() {
+    const greet = getGreetingName();
+    return `
+    <div class="dash-welcome dash-welcome-dentist">
+      <div class="dash-welcome-text">
+        <p class="dash-welcome-label">Good morning</p>
+        <h2 class="dash-welcome-title">Dr. ${greet}</h2>
+        <p class="dash-welcome-sub">You have <strong>7 appointments</strong> today and <strong>18 AI analyses</strong> completed.</p>
+      </div>
+      <div class="dash-welcome-actions">
+        <button class="btn-sm btn-blue-sm" onclick="navigate('analysis')">New analysis</button>
+        <button class="btn-sm" onclick="navigate('appointments')">View calendar</button>
+      </div>
+    </div>
+    ${renderTopbar('Clinic overview', 'Real-time snapshot of your practice', '<span class="badge badge-blue"><span class="live-dot"></span> AI Active</span>')}
+    <div class="grid-4">
+      ${statCardPro('Total patients', '124', 'Registered in your clinic', '+3 this week', 'blue', dashStatIcons.patients)}
+      ${statCardPro('Analyses today', '18', 'DeepSense AI engine', '+5 vs yesterday', 'teal', dashStatIcons.scan)}
+      ${statCardPro('Appointments', '7', 'Scheduled for today', '2 telehealth', 'purple', dashStatIcons.calendar)}
+      ${statCardPro('Avg. confidence', '94%', 'AI diagnostic accuracy', 'Last 30 days', 'green', dashStatIcons.accuracy)}
+    </div>
+    ${renderQuickActions([
+        [dashStatIcons.scan, 'Run AI analysis', 'Upload and analyse a radiograph', 'analysis'],
+        [dashStatIcons.patients, 'Patient records', 'Search and manage patients', 'patients'],
+        [dashStatIcons.calendar, 'Appointments', 'Schedule and send reminders', 'appointments'],
+        [dashStatIcons.video, 'Telehealth', 'Start a video consultation', 'teleconsult'],
+    ])}
+    <div class="grid-2 dash-main-grid">
+      <div class="card">
+        <div class="card-header-row"><h3>Today's schedule</h3><button class="btn-sm" onclick="navigate('appointments')">Full calendar</button></div>
+        <div class="dash-schedule">
+          ${[
+              ['09:00', 'Fatima Noor', 'FN', 'Checkup', 'badge-blue', 'Join', 'teleconsult'],
+              ['10:30', 'Ibrahim Qureshi', 'IQ', 'X-ray', 'badge-amber', 'Analyse', 'analysis'],
+              ['14:00', 'Amina Siddiqui', 'AS', 'Follow-up', 'badge-green', 'Join', 'teleconsult'],
+          ]
+              .map(
+                  ([time, name, initials, type, badge, action, page]) => `
+          <div class="dash-schedule-row">
+            <span class="dash-schedule-time">${time}</span>
+            <div class="avatar dash-schedule-avatar">${initials}</div>
+            <div class="dash-schedule-info"><span class="dash-schedule-name">${name}</span><span class="badge ${badge}">${type}</span></div>
+            <button class="btn-sm btn-blue-sm" onclick="navigate('${page}')">${action}</button>
+          </div>`
+              )
+              .join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header-row"><h3>Recent AI findings</h3><button class="btn-sm" onclick="navigate('reports')">All reports</button></div>
+        ${renderDashFinding('high', 'Caries â€” Tooth #14', 'Ibrahim Qureshi Â· Today, 10:42 AM', '92%')}
+        ${renderDashFinding('medium', 'Early bone loss â€” lower molar', 'Fatima Noor Â· Today, 09:15 AM', '87%')}
+        ${renderDashFinding('low', 'No abnormalities detected', 'Amina Siddiqui Â· Yesterday', '96%')}
+        <div class="dash-mini-chart">
+          <div class="dash-mini-chart-label">Analyses this week</div>
+          <div class="bar-chart" style="height:56px">${[8, 12, 10, 15, 14, 18, 18].map(h => `<div class="bar" style="height:${h * 4}%;background:var(--blue)"></div>`).join('')}</div>
+          <div class="bar-labels">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span class="bar-label">${d}</span>`).join('')}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderPatientDashboard() {
+    const greet = getGreetingName();
+    return `
+    <div class="dash-welcome dash-welcome-patient">
+      <div class="dash-welcome-text">
+        <p class="dash-welcome-label">Welcome back</p>
+        <h2 class="dash-welcome-title">${greet}</h2>
+        <p class="dash-welcome-sub">Your next appointment is <strong>May 5 at 10:00 AM</strong> with Dr. Yusuf Karim.</p>
+      </div>
+      <div class="health-score-card">
+        <div class="health-score-ring">Good</div>
+        <p class="health-score-label">Oral health score</p>
+        <p class="health-score-sub">Based on your latest AI report</p>
+      </div>
+    </div>
+    ${renderTopbar('My health', 'Your records, reports, and upcoming care', '<button class="btn-sm btn-blue-sm" onclick="navigate(\'appointments\')">Book appointment</button>')}
+    <div class="grid-4">
+      ${statCardPro('Last visit', 'Apr 12', 'Routine checkup', '', 'blue', dashStatIcons.visit)}
+      ${statCardPro('Next visit', 'May 5', 'Video consultation', '10:00 AM', 'teal', dashStatIcons.calendar)}
+      ${statCardPro('Reports', '4', 'Available to download', '1 new', 'purple', dashStatIcons.report)}
+      ${statCardPro('Dentist', 'Dr. Karim', 'Your primary provider', 'Active', 'green', dashStatIcons.patients)}
+    </div>
+    ${renderQuickActions([
+        [dashStatIcons.calendar, 'Book appointment', 'Choose a time that works for you', 'appointments'],
+        [dashStatIcons.report, 'My reports', 'View diagnosis history', 'myreports'],
+        [dashStatIcons.video, 'Video call', 'Join your consultation', 'teleconsult'],
+    ])}
+    <div class="grid-2 dash-main-grid">
+      <div class="card dash-report-card">
+        <div class="card-header-row"><h3>Latest clinical report</h3><span class="badge badge-amber">Needs review</span></div>
+        ${renderDashFinding('medium', 'Mild caries â€” tooth #14', 'Reviewed by Dr. Yusuf Karim Â· Apr 12, 2025', 'Moderate')}
+        <p class="dash-report-note">Your dentist recommends a follow-up within 2 weeks for monitoring and treatment planning.</p>
+        <div class="dash-report-actions">
+          <button class="btn-sm btn-blue-sm" onclick="navigate('myreports')">View full report</button>
+          <button class="btn-sm" onclick="showNotif('PDF downloaded')">Download PDF</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header-row"><h3>Upcoming care</h3><button class="btn-sm" onclick="navigate('appointments')">Manage</button></div>
+        <div class="dash-timeline">
+          <div class="dash-timeline-item">
+            <div class="dash-timeline-icon dash-timeline-icon-video">${dashStatIcons.video}</div>
+            <div class="dash-timeline-body">
+              <span class="dash-timeline-title">Video consultation</span>
+              <span class="dash-timeline-meta">May 5, 2025 Â· 10:00 AM Â· Dr. Yusuf Karim</span>
+            </div>
+            <button class="btn-sm btn-blue-sm" onclick="navigate('teleconsult')">Join</button>
+          </div>
+          <div class="dash-timeline-item">
+            <div class="dash-timeline-icon dash-timeline-icon-clinic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M9 8h1v4M14 8h1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+            <div class="dash-timeline-body">
+              <span class="dash-timeline-title">Follow-up X-ray</span>
+              <span class="dash-timeline-meta">May 15, 2025 Â· In clinic Â· SmileCare Dental</span>
+            </div>
+            <span class="badge badge-blue">Scheduled</span>
+          </div>
+        </div>
+        <div class="dash-care-tip"><strong>Tip:</strong> Join your video call 5 minutes early and have your latest report ready.</div>
+      </div>
+    </div>`;
+}
+
 function renderDashboard() {
     const c = document.getElementById('main-content');
+    if (currentRole === 'Admin') {
+        renderAdminDashboard();
+        return;
+    }
     if (currentRole === 'Dentist') {
-        c.innerHTML = `
-      <div class="topbar"><h1>Dashboard</h1><div class="topbar-actions"><span class="badge badge-blue">AI Active</span><button class="btn-sm btn-blue-sm" onclick="navigate('analysis')">New Analysis</button></div></div>
-      <div class="grid-4">
-        <div class="metric"><div class="label">Patients</div><div class="value">124</div><div class="sub">+3 this week</div></div>
-        <div class="metric"><div class="label">Analyses today</div><div class="value">18</div><div class="sub">AI-powered</div></div>
-        <div class="metric"><div class="label">Appointments</div><div class="value">7</div><div class="sub">Today</div></div>
-        <div class="metric"><div class="label">Avg confidence</div><div class="value">94%</div><div class="sub">AI accuracy</div></div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <h3>Today's appointments</h3>
-          <table class="tbl">
-            <thead><tr><th>Time</th><th>Patient</th><th>Type</th><th></th></tr></thead>
-            <tbody>
-              <tr><td>09:00</td><td>Fatima Noor</td><td><span class="badge badge-blue">Checkup</span></td><td><button class="btn-sm" onclick="navigate('teleconsult')">Join</button></td></tr>
-              <tr><td>10:30</td><td>Ibrahim Qureshi</td><td><span class="badge badge-amber">X-ray</span></td><td><button class="btn-sm" onclick="navigate('analysis')">Analyze</button></td></tr>
-              <tr><td>14:00</td><td>Amina Siddiqui</td><td><span class="badge badge-green">Follow-up</span></td><td><button class="btn-sm" onclick="navigate('teleconsult')">Join</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card">
-          <h3>Recent AI findings</h3>
-          <div class="ai-finding"><div class="ai-finding-dot" style="background:#e24b4a"></div><div><div style="font-size:13px;font-weight:500">Caries detected — Tooth #14</div><div style="font-size:11px;color:var(--color-text-secondary)">Patient: Ibrahim Qureshi · 92% confidence</div></div></div>
-          <div class="ai-finding"><div class="ai-finding-dot" style="background:#ef9f27"></div><div><div style="font-size:13px;font-weight:500">Early bone loss — lower molar</div><div style="font-size:11px;color:var(--color-text-secondary)">Patient: Fatima Noor · 87% confidence</div></div></div>
-          <div class="ai-finding"><div class="ai-finding-dot" style="background:#639922"></div><div><div style="font-size:13px;font-weight:500">No abnormalities found</div><div style="font-size:11px;color:var(--color-text-secondary)">Patient: Amina Siddiqui · 96% confidence</div></div></div>
-        </div>
-      </div>`;
+        c.innerHTML = renderDentistDashboard();
     } else {
-        c.innerHTML = `
-      <div class="topbar"><h1>My health</h1><div class="topbar-actions"><button class="btn-sm btn-blue-sm" onclick="navigate('appointments')">Book appointment</button></div></div>
-      <div class="grid-3">
-        <div class="metric"><div class="label">Last visit</div><div class="value" style="font-size:18px">Apr 12</div></div>
-        <div class="metric"><div class="label">Next appointment</div><div class="value" style="font-size:18px">May 5</div></div>
-        <div class="metric"><div class="label">Reports</div><div class="value">4</div></div>
-      </div>
-      <div class="grid-2">
-        <div class="card"><h3>Latest report</h3>
-          <div class="ai-finding"><div class="ai-finding-dot" style="background:#ef9f27"></div><div><div style="font-size:13px;font-weight:500">Mild caries — tooth #14</div><div style="font-size:11px;color:var(--color-text-secondary)">Reviewed by Dr. Yusuf Karim · Apr 12</div></div></div>
-          <button class="btn-sm" style="margin-top:.75rem;width:100%" onclick="navigate('myreports')">View all reports</button>
-        </div>
-        <div class="card"><h3>Upcoming</h3>
-          <div class="timeline-item"><div class="timeline-dot"></div><div><div style="font-size:13px;font-weight:500">Video consultation</div><div style="font-size:11px;color:var(--color-text-secondary)">May 5 · 10:00 AM · Dr. Yusuf Karim</div></div></div>
-          <div class="timeline-item"><div class="timeline-dot" style="background:var(--amber)"></div><div><div style="font-size:13px;font-weight:500">Follow-up x-ray</div><div style="font-size:11px;color:var(--color-text-secondary)">May 15 · In clinic</div></div></div>
-          <button class="btn-sm" style="margin-top:.75rem;width:100%" onclick="navigate('teleconsult')">Join video call</button>
-        </div>
-      </div>`;
+        c.innerHTML = renderPatientDashboard();
     }
 }
 
 function renderAnalysis() {
     document.getElementById('main-content').innerHTML = `
-    <div class="topbar"><h1>AI Analysis — DeepSense</h1><div class="topbar-actions"><span class="badge badge-blue">AI Engine v3.2</span></div></div>
+    <div class="topbar"><h1>AI Analysis â€” DeepSense</h1><div class="topbar-actions"><span class="badge badge-blue">AI Engine v3.2</span></div></div>
     <div class="grid-2">
       <div>
         <div class="card" style="margin-bottom:1rem">
           <h3>Upload radiograph</h3>
           <div class="upload-zone" onclick="simulateUpload()" id="upload-zone">
-            <span class="icon">🦷</span>
+            <span class="icon">ðŸ¦·</span>
             <p><strong>Click to upload</strong> or drag & drop</p>
-            <p style="font-size:11px;margin-top:4px">DICOM, PNG, JPEG · Max 20MB</p>
+            <p style="font-size:11px;margin-top:4px">DICOM, PNG, JPEG Â· Max 20MB</p>
           </div>
           <div id="upload-progress" class="hidden upload-progress"></div>
         </div>
@@ -381,11 +710,11 @@ function renderAnalysis() {
         <div style="color:var(--color-text-secondary);font-size:13px;padding:1rem 0;text-align:center" id="findings-placeholder">Upload an image to see AI analysis</div>
         <div id="findings-content" class="hidden">
           <div style="margin-bottom:1rem">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">Caries — Tooth #14</span><span class="badge badge-red">92%</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">Caries â€” Tooth #14</span><span class="badge badge-red">92%</span></div>
             <div class="prog-bar"><div class="prog-fill" style="width:92%;background:#e24b4a"></div></div>
           </div>
           <div style="margin-bottom:1rem">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">Bone loss — Lower left</span><span class="badge badge-amber">78%</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:500">Bone loss â€” Lower left</span><span class="badge badge-amber">78%</span></div>
             <div class="prog-bar"><div class="prog-fill" style="width:78%;background:#ef9f27"></div></div>
           </div>
           <div style="margin-bottom:1.5rem">
@@ -423,7 +752,7 @@ function simulateUpload() {
         if (pt) pt.textContent = pct + '%';
         if (pct >= 100) {
             clearInterval(iv);
-            showNotif('Analysis complete — 2 findings detected');
+            showNotif('Analysis complete â€” 2 findings detected');
             const fc = document.getElementById('findings-placeholder');
             const fct = document.getElementById('findings-content');
             if (fc) fc.classList.add('hidden');
@@ -440,7 +769,6 @@ function reportModal() {
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> AI findings summary</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Annotated radiograph</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Treatment recommendations</label>
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox"/> Billing codes</label>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:1rem">
@@ -482,7 +810,7 @@ function renderPatients() {
       </table>
     </div>
     <div class="card" style="margin-top:1rem">
-      <h3>Patient timeline — Fatima Noor</h3>
+      <h3>Patient timeline â€” Fatima Noor</h3>
       ${[
         ['Apr 12','AI analysis: mild caries detected','badge-amber'],
         ['Mar 1','Checkup: no issues','badge-green'],
@@ -542,9 +870,9 @@ function renderAppointments() {
     <div ${isPatient ? 'style="margin-bottom:1rem"' : 'class="grid-2"'}>
       <div class="card">
         <div class="cal-header">
-          <button class="cal-nav">← Apr</button>
+          <button class="cal-nav">â† Apr</button>
           <span style="font-size:14px;font-weight:500">May 2025</span>
-          <button class="cal-nav">Jun →</button>
+          <button class="cal-nav">Jun â†’</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
           ${days.map(d=>`<div style="text-align:center;font-size:11px;color:var(--color-text-secondary);padding:4px">${d}</div>`).join('')}
@@ -556,7 +884,7 @@ function renderAppointments() {
           }).join('')}
         </div>
         <div id="time-slots-area" style="margin-top:1rem">
-          <h4 style="font-size:12px;color:var(--color-text-secondary);margin-bottom:.5rem">Available slots — May ${sel}</h4>
+          <h4 style="font-size:12px;color:var(--color-text-secondary);margin-bottom:.5rem">Available slots â€” May ${sel}</h4>
           <div class="time-slots" id="time-slots">
             ${['09:00','09:30','10:00','10:30 (booked)','11:00','14:00','14:30','15:00','16:00'].map(t=>`<div class="slot ${t.includes('booked')?'booked':''}" onclick="pickSlot(this,'${t}')">${t}</div>`).join('')}
           </div>
@@ -569,7 +897,7 @@ function renderAppointments() {
             el.classList.toggle('selected', (i + 1) === d);
         });
         const h = document.querySelector('#time-slots-area h4');
-        if (h) h.textContent = `Available slots — May ${d}`;
+        if (h) h.textContent = `Available slots â€” May ${d}`;
     };
     window.pickSlot = function(el, slot) {
         document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
@@ -595,7 +923,7 @@ function bookAptModal(slot) {
 
 function renderTeleconsult() {
     document.getElementById('main-content').innerHTML = `
-    <div class="topbar"><h1>Telehealth consultation</h1><div class="topbar-actions"><span class="badge badge-green">● Live</span></div></div>
+    <div class="topbar"><h1>Telehealth consultation</h1><div class="topbar-actions"><span class="badge badge-green">â— Live</span></div></div>
     <div class="grid-2">
       <div>
         <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
@@ -604,7 +932,7 @@ function renderTeleconsult() {
               <div style="text-align:center">
                 <div class="avatar" style="width:64px;height:64px;font-size:22px;margin:0 auto 8px">YK</div>
                 <div style="color:rgba(255,255,255,.8);font-size:14px;font-weight:500">Dr. Yusuf Karim</div>
-                <div style="color:rgba(255,255,255,.4);font-size:12px">Dentist · Active</div>
+                <div style="color:rgba(255,255,255,.4);font-size:12px">Dentist Â· Active</div>
               </div>
             </div>
             <div style="position:absolute;bottom:12px;right:12px;width:100px;aspect-ratio:4/3;background:linear-gradient(135deg,#0f3460,#533483);border-radius:8px;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center">
@@ -615,10 +943,10 @@ function renderTeleconsult() {
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:.75rem;background:var(--color-background-primary)">
-            <button class="vc-btn" id="mic-btn" onclick="toggleMic()" title="Mute">🎤</button>
-            <button class="vc-btn" id="cam-btn" onclick="toggleCam()" title="Camera">📷</button>
-            <button class="vc-btn end" onclick="showModal(endCallModal())">📞</button>
-            <button class="vc-btn" onclick="showNotif('Screen sharing started')" title="Share screen">🖥️</button>
+            <button class="vc-btn" id="mic-btn" onclick="toggleMic()" title="Mute">ðŸŽ¤</button>
+            <button class="vc-btn" id="cam-btn" onclick="toggleCam()" title="Camera">ðŸ“·</button>
+            <button class="vc-btn end" onclick="showModal(endCallModal())">ðŸ“ž</button>
+            <button class="vc-btn" onclick="showNotif('Screen sharing started')" title="Share screen">ðŸ–¥ï¸</button>
           </div>
         </div>
         <div class="card card-sm">
@@ -633,7 +961,7 @@ function renderTeleconsult() {
         <div id="chat-msgs" style="flex:1;overflow-y:auto;max-height:260px;margin-bottom:8px">
           <div class="chat-msg them"><div class="bubble">Hello! Can you describe where the pain is?</div></div>
           <div class="chat-msg me clearfix"><div class="bubble">It's on the upper left, especially with cold drinks</div></div>
-          <div class="chat-msg them"><div class="bubble">I can see from the AI analysis — we'll look at tooth #14</div></div>
+          <div class="chat-msg them"><div class="bubble">I can see from the AI analysis â€” we'll look at tooth #14</div></div>
         </div>
         <div class="chat-input-row">
           <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()"/>
@@ -653,7 +981,7 @@ window.toggleMic = function() {
 window.toggleCam = function() {
     camOn = !camOn;
     const btn = document.getElementById('cam-btn');
-    if (btn) { btn.textContent = camOn ? '📷' : '🚫';
+    if (btn) { btn.textContent = camOn ? '🎥' : '🔴';
         btn.classList.toggle('active', !camOn); }
     showNotif(camOn ? 'Camera on' : 'Camera off');
 };
@@ -716,15 +1044,298 @@ function renderMyReports() {
     <div class="card">
       <h3>Report timeline</h3>
       ${[
-        ['Apr 12, 2025','Mild caries — tooth #14','Reviewed by Dr. Yusuf Karim','badge-amber'],
-        ['Mar 1, 2025','Routine checkup — all clear','No action required','badge-green'],
+        ['Apr 12, 2025','Mild caries â€” tooth #14','Reviewed by Dr. Yusuf Karim','badge-amber'],
+        ['Mar 1, 2025','Routine checkup â€” all clear','No action required','badge-green'],
         ['Jan 15, 2025','X-ray: early calculus buildup','Treatment recommended','badge-amber'],
         ['Dec 2024','Initial consultation','Records created','badge-blue']
       ].map(([d,t,s,b])=>`
       <div class="timeline-item">
         <div class="timeline-dot"></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:500">${t}</div><div style="font-size:11px;color:var(--color-text-secondary)">${d} · ${s}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500">${t}</div><div style="font-size:11px;color:var(--color-text-secondary)">${d} Â· ${s}</div></div>
         <button class="btn-sm" style="flex-shrink:0" onclick="showNotif('Report downloaded')">View PDF</button>
       </div>`).join('')}
+    </div>`;
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ADMIN PANEL
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+function statCard(label, value, sub, trend, accent) {
+    const trendHtml = trend
+        ? `<span class="stat-trend ${trend.startsWith('+') ? 'up' : trend.startsWith('-') ? 'down' : ''}">${trend}</span>`
+        : '';
+    return `<div class="stat-card stat-card-${accent || 'blue'}">
+      <div class="stat-card-label">${label}</div>
+      <div class="stat-card-value">${value}</div>
+      <div class="stat-card-footer">${sub || ''}${trendHtml}</div>
+    </div>`;
+}
+
+function renderAdminDashboard() {
+    const s = getPlatformStats();
+    const c = document.getElementById('main-content');
+    c.innerHTML = `
+    ${renderTopbar('Platform overview', 'Monitor clinics, users, and AI diagnostics across DeepSense', '<span class="badge badge-admin">Live</span><button class="btn-sm btn-blue-sm" onclick="navigate(\'admin-users\')">Manage users</button>')}
+    <div class="grid-4">
+      ${statCard('Total users', s.totalUsers, `${s.dentists} dentists Â· ${s.patients} patients`, '+12% this month', 'blue')}
+      ${statCard('Active clinics', s.clinics, 'Registered practices', '+8 new', 'teal')}
+      ${statCard('AI analyses', s.analyses.toLocaleString(), 'All time', '+340 today', 'purple')}
+      ${statCard('Appointments today', s.appointmentsToday, 'Scheduled across clinics', '+12', 'green')}
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header-row">
+          <h3>User growth</h3>
+          <span class="badge badge-blue">Last 7 days</span>
+        </div>
+        <div class="bar-chart" style="height:100px">
+          ${[42, 58, 51, 72, 68, 85, 94].map((h, i) => `<div class="bar" style="height:${h}%;background:var(--indigo)" title="Day ${i + 1}"></div>`).join('')}
+        </div>
+        <div class="bar-labels">
+          ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => `<span class="bar-label">${d}</span>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header-row">
+          <h3>System health</h3>
+          <span class="badge badge-green">Operational</span>
+        </div>
+        <div class="health-list">
+          <div class="health-row"><span>API uptime</span><strong>${s.uptime}</strong></div>
+          <div class="health-row"><span>AI inference</span><strong>3.8s avg</strong></div>
+          <div class="health-row"><span>Storage</span><strong>68% used</strong></div>
+          <div class="health-row"><span>HIPAA audit</span><strong class="text-green">Passed</strong></div>
+        </div>
+        <button class="btn-sm" style="margin-top:1rem;width:100%" onclick="navigate('admin-system')">View system settings</button>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header-row"><h3>Recent registrations</h3><button class="btn-sm" onclick="navigate('admin-users')">View all</button></div>
+        <table class="tbl">
+          <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Status</th></tr></thead>
+          <tbody>${getRecentUsersRows(5)}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header-row"><h3>Recent activity</h3></div>
+        ${getAuditEntries(5)
+            .map(
+                e => `<div class="activity-row">
+          <div class="activity-icon">${e.icon}</div>
+          <div class="activity-body">
+            <div class="activity-title">${e.title}</div>
+            <div class="activity-meta">${e.time}</div>
+          </div>
+        </div>`
+            )
+            .join('')}
+      </div>
+    </div>`;
+}
+
+function getRecentUsersRows(limit) {
+    const users = loadUserRecords()
+        .filter(u => u.role !== 'Admin')
+        .slice(-limit)
+        .reverse();
+    if (!users.length) {
+        return '<tr><td colspan="4" style="color:var(--color-text-secondary)">No users registered yet</td></tr>';
+    }
+    return users
+        .map(u => {
+            const badge =
+                u.role === 'Dentist' ? 'badge-blue' : 'badge-green';
+            return `<tr>
+        <td>${u.fullName}</td>
+        <td><span class="badge ${badge}">${u.role}</span></td>
+        <td style="color:var(--color-text-secondary)">${u.email}</td>
+        <td><span class="badge badge-green">Active</span></td>
+      </tr>`;
+        })
+        .join('');
+}
+
+function getAuditEntries(limit) {
+    const entries = [
+        { icon: 'ðŸ”¬', title: 'AI analysis completed â€” Clinic SmileCare', time: '2 min ago' },
+        { icon: 'ðŸ‘¤', title: 'New dentist registered â€” Dr. Aisha Khan', time: '18 min ago' },
+        { icon: 'ðŸ“‹', title: 'PDF report generated â€” Patient #4421', time: '34 min ago' },
+        { icon: 'ðŸ¥', title: 'New clinic registered â€” Bright Dental Studio', time: '1 hr ago' },
+        { icon: 'ðŸ”’', title: 'Admin login â€” Platform Administrator', time: '2 hr ago' },
+        { icon: 'ðŸ“…', title: '142 appointments booked today', time: '3 hr ago' },
+        { icon: 'âš¡', title: 'AI model v3.2 deployed to production', time: 'Yesterday' },
+    ];
+    return entries.slice(0, limit);
+}
+
+function renderAdminUsers() {
+    const users = loadUserRecords();
+    const c = document.getElementById('main-content');
+    c.innerHTML = `
+    ${renderTopbar('User management', `${users.length} accounts on the platform`, '<button class="btn-sm btn-blue-sm" onclick="showNotif(\'Export started â€” CSV will download shortly\')">Export CSV</button>')}
+    <div class="card">
+      <div class="toolbar-row">
+        <input type="text" class="search-input" placeholder="Search by name or email..." oninput="filterAdminUsers(this.value)"/>
+        <select class="filter-select" id="user-role-filter" onchange="filterAdminUsers()">
+          <option value="">All roles</option>
+          <option value="Dentist">Dentist</option>
+          <option value="Patient">Patient</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <table class="tbl" id="admin-users-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>License</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${users.map(renderUserRow).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderUserRow(u) {
+    const roleBadge =
+        u.role === 'Admin' ? 'badge-purple' : u.role === 'Dentist' ? 'badge-blue' : 'badge-green';
+    return `<tr data-role="${u.role}" data-search="${(u.fullName + ' ' + u.email).toLowerCase()}">
+      <td><div class="tbl-user"><div class="avatar" style="width:28px;height:28px;font-size:10px">${getInitialsFromName(u.fullName)}</div><span>${u.fullName}</span></div></td>
+      <td style="color:var(--color-text-secondary)">${u.email}</td>
+      <td><span class="badge ${roleBadge}">${u.role}</span></td>
+      <td style="color:var(--color-text-secondary)">${u.medicalLicense || 'â€”'}</td>
+      <td><span class="badge badge-green">Active</span></td>
+      <td><button class="btn-sm" onclick="showNotif('User details opened')">View</button></td>
+    </tr>`;
+}
+
+window.filterAdminUsers = function (query) {
+    const q = (query ?? document.querySelector('.search-input')?.value ?? '').toLowerCase();
+    const role = document.getElementById('user-role-filter')?.value ?? '';
+    document.querySelectorAll('#admin-users-table tbody tr').forEach(row => {
+        const matchQ = !q || (row.dataset.search || '').includes(q);
+        const matchR = !role || row.dataset.role === role;
+        row.style.display = matchQ && matchR ? '' : 'none';
+    });
+};
+
+function renderAdminClinics() {
+    const clinics = [
+        ['SmileCare Dental', 'Karachi', '4 dentists', 'Active'],
+        ['Bright Dental Studio', 'Lahore', '8 dentists', 'Active'],
+        ['Family Dental Hub', 'Islamabad', '1 dentist', 'Active'],
+        ['Premier Oral Health', 'Rawalpindi', '3 dentists', 'Active'],
+        ['City Smile Clinic', 'Multan', '5 dentists', 'Active'],
+    ];
+    document.getElementById('main-content').innerHTML = `
+    ${renderTopbar('Clinics', 'Manage registered dental practices', '<button class="btn-sm btn-blue-sm" onclick="showNotif(\'Clinic onboarding wizard opened\')">Add clinic</button>')}
+    <div class="grid-3">
+      ${clinics
+          .map(
+              ([name, city, staff, status]) => `
+      <div class="clinic-card">
+        <div class="clinic-card-top">
+          <div class="clinic-icon">${name.charAt(0)}</div>
+        </div>
+        <h4 class="clinic-name">${name}</h4>
+        <p class="clinic-meta">${city} Â· ${staff}</p>
+        <div class="clinic-footer">
+          <span class="badge badge-green">${status}</span>
+          <button class="btn-sm" onclick="showNotif('Clinic profile opened')">Manage</button>
+        </div>
+      </div>`
+          )
+          .join('')}
+    </div>`;
+}
+
+function renderAdminAnalytics() {
+    const s = getPlatformStats();
+    document.getElementById('main-content').innerHTML = `
+    ${renderTopbar('Analytics', 'Platform-wide insights and performance metrics', '<button class="btn-sm" onclick="showNotif(\'Report scheduled for Monday 9 AM\')">Schedule report</button>')}
+    <div class="grid-4">
+      ${statCard('Analyses / day', '340', 'Avg. last 30 days', '+22%', 'blue')}
+      ${statCard('Active dentists', s.dentists, 'On platform', '+4', 'teal')}
+      ${statCard('Avg. scan time', '3.8s', 'AI inference', '-0.2s', 'green')}
+      ${statCard('Report downloads', '1,240', 'Last 30 days', '+18%', 'purple')}
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Analyses by clinic</h3>
+        <div class="revenue-bars">
+          <div class="revenue-row"><span>SmileCare Dental</span><div class="revenue-bar-wrap"><div class="revenue-bar" style="width:72%;background:var(--indigo)"></div></div><strong>2,840</strong></div>
+          <div class="revenue-row"><span>Bright Dental Studio</span><div class="revenue-bar-wrap"><div class="revenue-bar" style="width:55%;background:var(--blue)"></div></div><strong>1,920</strong></div>
+          <div class="revenue-row"><span>Family Dental Hub</span><div class="revenue-bar-wrap"><div class="revenue-bar" style="width:35%;background:var(--teal)"></div></div><strong>680</strong></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Top findings (AI)</h3>
+        ${[
+            ['Caries', 38, '#e24b4a'],
+            ['Bone loss', 24, '#ef9f27'],
+            ['Calculus', 18, '#178fd4'],
+            ['No issues', 20, '#639922'],
+        ]
+            .map(
+                ([label, pct, color]) => `
+        <div style="margin-bottom:.75rem">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${label}</span><span style="font-weight:500">${pct}%</span></div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>
+        </div>`
+            )
+            .join('')}
+      </div>
+    </div>`;
+}
+
+function renderAdminAudit() {
+    const entries = getAuditEntries(12);
+    document.getElementById('main-content').innerHTML = `
+    ${renderTopbar('Audit log', 'Security and compliance event history', '<span class="badge badge-green">HIPAA compliant</span>')}
+    <div class="card">
+      <table class="tbl">
+        <thead><tr><th>Event</th><th>User</th><th>IP</th><th>Time</th></tr></thead>
+        <tbody>
+          ${entries
+              .map(
+                  (e, i) => `<tr>
+            <td>${e.title}</td>
+            <td style="color:var(--color-text-secondary)">${i === 4 ? 'admin@deepsense.health' : 'system'}</td>
+            <td style="color:var(--color-text-secondary)">192.168.${i + 1}.${10 + i}</td>
+            <td style="color:var(--color-text-secondary)">${e.time}</td>
+          </tr>`
+              )
+              .join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderAdminSystem() {
+    document.getElementById('main-content').innerHTML = `
+    ${renderTopbar('System settings', 'Configure platform services and AI engine', '<button class="btn-sm btn-blue-sm" onclick="showNotif(\'Settings saved\')">Save changes</button>')}
+    <div class="grid-2">
+      <div class="card">
+        <h3>AI engine</h3>
+        <div class="settings-row"><div><strong>Model version</strong><p class="settings-desc">Production inference model</p></div><span class="badge badge-blue">v3.2</span></div>
+        <div class="settings-row"><div><strong>Auto-scaling</strong><p class="settings-desc">Scale GPU workers on demand</p></div><label class="toggle"><input type="checkbox" checked/><span></span></label></div>
+        <div class="settings-row"><div><strong>Confidence threshold</strong><p class="settings-desc">Minimum score to flag findings</p></div><span style="font-weight:500">85%</span></div>
+      </div>
+      <div class="card">
+        <h3>Security</h3>
+        <div class="settings-row"><div><strong>Two-factor auth</strong><p class="settings-desc">Required for admin accounts</p></div><label class="toggle"><input type="checkbox" checked/><span></span></label></div>
+        <div class="settings-row"><div><strong>Session timeout</strong><p class="settings-desc">Auto logout inactive admins</p></div><span style="font-weight:500">30 min</span></div>
+        <div class="settings-row"><div><strong>Data retention</strong><p class="settings-desc">Radiograph storage period</p></div><span style="font-weight:500">7 years</span></div>
+      </div>
+      <div class="card">
+        <h3>Notifications</h3>
+        <div class="settings-row"><div><strong>Email alerts</strong><p class="settings-desc">System errors and downtime</p></div><label class="toggle"><input type="checkbox" checked/><span></span></label></div>
+        <div class="settings-row"><div><strong>Weekly digest</strong><p class="settings-desc">Platform summary to admins</p></div><label class="toggle"><input type="checkbox" checked/><span></span></label></div>
+      </div>
+      <div class="card">
+        <h3>Maintenance</h3>
+        <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem">Last backup: Today, 03:00 AM Â· Next scheduled maintenance: May 25, 2025</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="showNotif('Backup initiated')">Run backup</button>
+          <button class="btn-sm" onclick="showNotif('Cache cleared')">Clear cache</button>
+          <button class="btn-sm" style="color:#a32d2d;border-color:#e24b4a" onclick="showNotif('Maintenance mode enabled')">Maintenance mode</button>
+        </div>
+      </div>
     </div>`;
 }
